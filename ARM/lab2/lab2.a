@@ -1,0 +1,166 @@
+       ORG 0
+       B GLAVNI 
+                        ; Iznimke
+       ORG 0x18
+       B OBRADA 
+
+GLAVNI MOV R1, #GPIO1 ; R1=GPIO1 jer je tu zapisana adresa GPIO-a
+       LDR R1, [R1] ; u R1 se učitava bazna adresa GPIO-a
+       ADD R1,R1,#4
+
+       LDR R2, GPIO2 ; dohvati adresu GPIO-a
+       MOV R3, #0b11100000 ; smjer vrata A
+       STR R3, [R2, #8] ; pošalji smjer u PA_DDR
+
+       MSR CPSR, #0b11010010 ; prelazak u način rada IRQ
+       MOV R13, #0x10000 ; Stog za način irq
+       MSR CPSR, #0b11010011 ; prelazak u način rada SVC
+       MOV R13, #0xFC00  ; Stog za način svc
+       LDR R4, RTC ; dohvati adresu RTC-a
+       MOV R5, #0
+       STR R5, [R4, #0x0C] ; pobriši brojilo
+       LDR R9, SEKUNDE
+       MOV R5, R9 ; broj impulsa u periodu od 10s
+       STR R5, [R4, #0x04] ; upiši konstantu brojenja u MR
+       MOV R5, #1
+       
+AJSZR MOV R3, #0b00000000 ; gasi sve led diode
+      STR R3, [R2, #0] 
+
+      MOV R0, #0x0D ; slanje znaka 0xD => briše se ulazni registar
+      BL LCDWR
+      MOV R0, #0x57 ; slanje znaka ‘W'
+      BL LCDWR
+      MOV R0, #0x45 ; slanje znaka ‘E'
+      BL LCDWR
+      MOV R0, #0x4C ; slanje znaka ‘L'
+      BL LCDWR
+      MOV R0, #0x43 ; slanje znaka ‘C'
+      BL LCDWR
+      MOV R0, #0x4F ; slanje znaka ‘O'
+      BL LCDWR
+      MOV R0, #0x4D ; slanje znaka ‘M'
+      BL LCDWR
+      MOV R0, #0x45 ; slanje znaka ‘E'
+      BL LCDWR
+      MOV R0, #0x0A ; slanje znaka 0xA => ispis znakova na zaslon
+      BL LCDWR
+
+TIPKA LDR R3, [R2, #0] ; pročitaj stanje tipke (tj. PA_DR)
+      TST R3, #0b00000001 ; Ispituje stanje tipke
+      BEQ TIPKA 
+      BNE RTCKRENI
+
+RTCKRENI STR R5, [R4, #0x10] ; dozvoli prekid RTC-u (obavezno)
+         MRS R4, CPSR ; dozvoli prekid IRQ
+         BIC R4, R4, #0b10000000
+         MSR CPSR, R4
+
+GA ADD R9, R9, #0
+   MOV R3, #0b00100000 ; Pali crvenu diodu
+   STR R3, [R2, #0]
+
+   MOV R0, #0x0D ; slanje znaka 0xD => briše se ulazni registar
+   BL LCDWR
+   MOV R0, #0x48 ; slanje znaka ‘H'
+   BL LCDWR
+   MOV R0, #0x45 ; slanje znaka ‘E'
+   BL LCDWR
+   MOV R0, #0x41 ; slanje znaka ‘A'
+   BL LCDWR
+   MOV R0, #0x54 ; slanje znaka ‘T'
+   BL LCDWR
+   MOV R0, #0x49 ; slanje znaka ‘I'
+   BL LCDWR
+   MOV R0, #0x4E ; slanje znaka ‘N'
+   BL LCDWR
+   MOV R0, #0x47 ; slanje znaka ‘G'
+   BL LCDWR
+   MOV R0, #0x0A ; slanje znaka 0xA => ispis znakova na zaslon
+   BL LCDWR
+
+RADI1 B RADI1
+
+TK MOV R3, #0b01000000 ; Pali zutu diodu
+   STR R3, [R2, #0] 
+
+   MOV R0, #0x0D ; slanje znaka 0xD => briše se ulazni registar
+   BL LCDWR
+   MOV R0, #0x43 ; slanje znaka ‘C'
+   BL LCDWR
+   MOV R0, #0x4F ; slanje znaka ‘O'
+   BL LCDWR
+   MOV R0, #0x46 ; slanje znaka ‘F'
+   BL LCDWR
+   MOV R0, #0x46 ; slanje znaka ‘F'
+   BL LCDWR
+   MOV R0, #0x45 ; slanje znaka ‘E'
+   BL LCDWR
+   MOV R0, #0x45 ; slanje znaka ‘E'
+   BL LCDWR
+   MOV R0, #0x0A ; slanje znaka 0xA => ispis znakova na zaslon
+   BL LCDWR
+
+RADI2 B RADI2
+
+TM MOV R3, #0b10000000 ; Pali zelenu diodu
+   STR R3, [R2, #0] 
+
+   MOV R0, #0x0D ; slanje znaka 0xD => briše se ulazni registar
+   BL LCDWR
+   MOV R0, #0x4D ; slanje znaka ‘M'
+   BL LCDWR
+   MOV R0, #0x49 ; slanje znaka ‘I'
+   BL LCDWR
+   MOV R0, #0x4C ; slanje znaka ‘L'
+   BL LCDWR
+   MOV R0, #0x4B ; slanje znaka ‘K'
+   BL LCDWR
+   MOV R0, #0x0A ; slanje znaka 0xA => ispis znakova na zaslon
+   BL LCDWR
+
+RADI3 B RADI3
+
+KJG MOV R3, #0b11100000
+    STR R3, [R2, #0] 
+
+    MOV R0, #0x0D ; slanje znaka 0xD => briše se ulazni registar
+    BL LCDWR
+    MOV R0, #0x44 ; slanje znaka ‘D'
+    BL LCDWR
+    MOV R0, #0x4F ; slanje znaka ‘O'
+    BL LCDWR
+    MOV R0, #0x4E ; slanje znaka ‘N'
+    BL LCDWR
+    MOV R0, #0x45 ; slanje znaka ‘E'
+    BL LCDWR
+    MOV R0, #0x0A ; slanje znaka 0xA => ispis znakova na zaslon
+    BL LCDWR
+
+RADI4 B RADI4
+
+    B GLAVNI ; Vracanje u "idle"
+
+LCDWR STMFD R13!, {R0}
+      AND R0, R0, #0x7F ; postavi bit 7 u nulu (za svaki slučaj)
+      STRB R0, [R1]
+      ORR R0, R0, #0x80 ; postavi bit 7 u jedan (podigni impuls)
+      STRB R0, [R1]
+      AND R0, R0, #0x7F ; postavi bit 7 u nulu (spusti impuls)
+      STRB R0, [R1]
+      LDMFD R13!, {R0}
+      MOV PC, LR
+
+OBRADA ; Prekidni potprogram za IRQ - posluživanje RTC-a
+        STMFD R13!, {R4-R5} ; spremi kontekst
+        LDR R4, RTC ; dohvati adresu RTC-a
+        MOV R5, #0 ; inicijaliziraj sljedeći ciklus brojenja
+        STR R5, [R4, #0x0C] ; pobriši brojilo (MR ostaje 2650)
+        STR R5, [R4, #0x08] ; obriši status (šalje se bilo što)
+        LDMFD R13!, {R4-R5} ; obnovi kontekst
+        SUBS PC, LR, #0
+
+SEKUNDE DW 2650 ; Konstanta za sekunde jer se ne mogu direktno upisati
+GPIO1 DW 0xFFFF0F00 ; Spojen LCD prikaznik
+GPIO2 DW 0xFFFF0B00 ; Spojene LED diode i tipka
+RTC DW 0xFFFF0E00 ; Spojen RTC

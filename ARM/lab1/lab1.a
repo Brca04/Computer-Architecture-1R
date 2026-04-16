@@ -1,0 +1,104 @@
+       MOV R1, #0x2000 ; IZLAZNA ADRESA
+       MOV R0, #0x700 ; ULAZNA ADRESA
+       
+PETLJA LDR R2, [R0], #4 ; R2 se koristi za "citnanje" ulaznih podataka
+
+       LDR R5, KONST
+       CMP R2, R5 ; Provjerava je li petlja dosla do kraja
+       BEQ KRAJ
+
+       LDR R3, [R0], #4 ; 1. operand
+       LDR R4, [R0], #4 ; 2. operand
+       
+       CMP R2, #0
+       BEQ ZBR
+        
+       CMP R2, #1 ; Biranje operacije
+       BEQ ODZ
+
+       CMP R2, #2
+       BEQ MNZ
+
+       CMP R2, #3
+       MOV SP, #0x5000 ; Adresa stoga
+       STMFD SP!, {R3, R4} ; Inicijalizacija stoga
+       BLEQ DIJELI
+       ADD SP, SP, #8
+
+       B PETLJA ; Vraca natrag u petlju
+        
+ZBR   ADD R5, R3, R4 ; Operacija zbrajanja
+      STR R5, [R1], #4 ; Pohrana zbroja
+      B PETLJA ; Vraca natrag u petlju 
+
+ODZ  SUB R5, R3, R4 ; Operacija oduzimanja
+     STR R5, [R1], #4 ; Pohrana razlike
+     B PETLJA ; Vraca natrag u petlju 
+
+MNZ   MUL R5, R3, R4 ; Operacija ,mnozenja
+      STR R5, [R1], #4 ; Pohrana umnoska
+      B PETLJA ; Vraca natrag u petlju
+
+DIJELI STMFD SP!, {R6, R7, R8} ; "Funkcija" za dijeljenje i spremanje konteksta
+       LDR R6, [SP, #12] ; Povlacenje sa stoga
+       LDR R7, [SP, #16]
+       MOV R8, #0
+       MOV R10, #0
+
+       CMP R7, #0 ; Provjera dijeljenja s 0
+       BEQ GOTOVO
+       
+       CMP R6, #0 ; Provjera predznaka 1. operanda
+       BMI KOMP1
+
+BCK    CMP R7, #0
+       BMI KOMP2
+       B PETLJA2
+
+KOMP1 MVN R6, R6
+      ADD R6, R6, #1 ; Pretvorba 1. operanda ukoliko je negativan
+      EOR R8, R8, #1
+      B BCK
+
+KOMP2 MVN R7, R7
+      ADD R7, R7, #1 ; Pretvorba 2. operanda ukoliko je negativan
+      EOR R8, R8, #1
+      B PETLJA2
+
+PETLJA2
+      SUBS R6, R6, R7 ; Metoda uzastopnog dijeljenja
+      ADDGE R10, R10, #1
+      
+      BHI PETLJA2 
+
+      CMP R8, #1
+      MVNEQ R10, R10 ; "Namjestanje" predznaka
+      ADDEQ R10, R10, #1
+      
+GOTOVO STR R10, [R1], #4 ; Zapisivanje rezultata dijeljenja
+       LDMFD SP!, {R6, R7, R8} ; Obnavljanje konteksta
+       MOV PC, LR 
+    
+KRAJ MVN R5, #0 ; !0 = 0xFFFFFFFF
+     STR R5, [R1], #4 ; Zapisivanje kraja
+     SWI 123456 ; Kraj programa
+
+KONST dw 0x88888888
+
+        ORG 0x700  ; Test primjeri
+        DW      0x3, 0xFFFFFEFF, 0x00000010     ; -257 / 16 = -16 0xFFFF FFF0
+        DW      0x1, 0x1F4, 0xFFFFFD44          ; 500 - (-700) = 1200 0x0000 04B0
+        DW      0x2, 0xFFFFFFFE, 0xA            ; -2 * 10 = -20 0xFFFF FFEC
+        DW      0x3, 0xFFFFF000, 0xFFFFFFC0     ; -4096 / -64 = 64 0x0000 0040
+        DW      0x3, 0xA, 0x2                   ; 10 / 2 = 5 0x0000 0005
+        DW      0x3, 0xFFFFFFF6, 0xFFFFFFFE     ; -10 / -2 = 5 0x0000 0005
+        DW      0x2, 0xFFFFFFFB, 0x4            ; -5 * 4 = -20 0xFFFF FFEC
+        DW      0x1, 0xFFFFFFFC, 0x5            ; -4 - 5 = -9 0xFFFF FFF7
+        DW      0x3, 0xFFFFFEAF, 0x110010       ; -337 / 1114128 = 0 0x0000 0000
+        DW      0x1, 0x211F4, 0xFAFBFD44        ; 135668 - (-84148924) = 84284592 0x0506 14B0
+        DW      0x2, 0xFFFBBFFE, 0x2300A        ; -278530 * 143370 = -39932846100, not in 32 bits, undefined behaviour (0xB3D1 1FEC)
+        DW      0x3, 0xF7F4F200, 0xFF34FFC0     ; -134942208 / -13303872 = 10 0x0000 000A
+        DW      0x88888888
+
+ org 0x2000
+ dsw 13

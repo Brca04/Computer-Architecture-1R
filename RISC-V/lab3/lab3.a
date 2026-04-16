@@ -1,0 +1,75 @@
+        lui x4, %hi(0xFFFF0F00)
+        addi x4, x4, %lo(0xFFFF0F00); dohvat adrese gpio1
+        lui x5, %hi(0xFFFF0B00)
+        addi x5, x5, %lo(0xFFFF0B00); dohvat adrese gpio2
+
+        addi t1,x0,0b11100000; smjer vrata gpio-a 2
+        sw t1, 8(x5) ; pošalji smjer u PA_DDR
+        
+        add a7,x0,x0
+        add t6,x0,x0
+        addi t5,x0,11
+
+check lw t1, 0(x5)
+      andi t1, t1, 2
+      beq t1, x0, check
+      lw t2, 0(x5)
+      andi t2, t2, 1
+      bne t2, x0, broj
+      jal x0, check
+
+broj   slt t6,t5,a7
+       bne t6,x0,reset
+       addi a7,a7,1
+
+       jal ra, obradi
+
+       beq a0,x0,lcd1
+       jal x0, lcd2
+
+lcd1 addi a2,x0,0x0D
+     jal ra, lcdwr
+
+     add a2,a1,x0  
+     jal ra, lcdwr
+
+     addi a2,x0,0x0A
+     jal ra, lcdwr
+
+     jal x0, check
+
+lcd2 addi a2,x0,0x0D
+     jal ra, lcdwr
+
+     add a2,a0,x0
+     jal ra, lcdwr
+
+     add a2,a1,x0
+     jal ra, lcdwr
+
+     addi a2,x0,0x0A
+     jal ra, lcdwr
+
+     jal x0, check
+       
+reset add a7,x0, x0
+      add a0, x0, x0
+      add a1, x0, x0
+      jal x0, broj
+
+lcdwr   andi a2,a2,0x7F
+        sb a2, 4(x4)
+        ori a2,a2,0x80
+        sb a2, 4(x4)
+        andi a2,a2,0x7F
+        sb a2, 4(x4)
+        jalr x0, 0(ra)
+
+obradi  addi t3,x0,10
+        add t4,a7,x0
+p1      bge t4,t3,p2
+        addi a1,t4,48
+        jalr x0,0(ra)
+p2      addi t4,t4,-10
+        addi a0,x0,49
+        jal x0,p1
